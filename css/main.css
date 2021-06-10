@@ -1,0 +1,18 @@
+body { 
+    margin: 0; 
+    height: 100vh;
+    overflow: hidden;
+}
+
+canvas {
+    display:block;
+}
+
+#info {
+	position: absolute;
+    color: white;
+	top: 10px;
+	text-align: left;
+    margin-left: 20px;
+	display:block;
+}

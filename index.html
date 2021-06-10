@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Essay</title>
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+    <!-- some scripts im probably not using
+    <script src="https://threejs.org/build/three.js"></script> 
+    <script type="module" src="https://threejs.org/examples/jsm/utils/BufferGeometryUtils.js"></script>
+
+    <script src="https://raw.githubusercontent.com/mrdoob/three.js/master/build/three.js"></script>
+    <script type="module" src="https://raw.githubusercontent.com/mrdoob/three.js/master/examples/jsm/utils/BufferGeometryUtils.js"></script>
+
+    <script src="js/Three.js"></script>
+    <script type="module" src="js/BufferGeometryUtils.js"></script> 
+    -->
+
+    <div id="info">
+        window rotation:    <span id="text1">...</span><br> 
+        camera angle:       <span id="text2">...</span><br> 
+        camera x:           <span id="text3">...</span><br> 
+        phase:              <span id="text4">...</span></div>
+
+    <script type="module">
+        import * as THREE from 'https://cdn.skypack.dev/three@0.129.0';
+        import { BufferGeometryUtils } from 'https://cdn.skypack.dev/three@0.129.0/examples/jsm/utils/BufferGeometryUtils.js';
+        import { TextGeometry } from 'https://cdn.skypack.dev/three@0.129.0/build/three.module.js';
+        
+        const mouse = new THREE.Vector2();
+        let mousehold = false;
+
+        let i, j;
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color( 0x000000 );
+        const stencilScene = new THREE.Scene();
+        const whiteroom = new THREE.Scene();
+        const blackroom = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+        const camera2 = new THREE.PerspectiveCamera( 75, 5 / 5, 0.1, 1000 );
+
+        // declare window rotation variable
+        let rotx = 0;
+        let prevrotx;
+        let prevcr;
+
+        let phase = 0;
+
+        let textMesh1, textMesh2, textGeo;
+        let font = undefined;
+
+        const renderer = new THREE.WebGLRenderer({
+            antialias: true});
+        renderer.setClearColor( 0x000000, 0 );
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        document.body.appendChild( renderer.domElement );
+
+        camera.position.set( 0, 0, 30);
+        camera.lookAt( 0, 0, 0 );
+
+        const geometry = new THREE.SphereGeometry( 2, 30, 30 );
+        const whitemat = new THREE.MeshBasicMaterial( { color: 0xffffff} );
+        const blackmat = new THREE.MeshBasicMaterial({color: 0x000000});
+        const portalmaterial = new THREE.MeshBasicMaterial({color: 0xffff00, side: THREE.DoubleSide});
+        const linemat1 = new THREE.LineBasicMaterial( { color: 0xffffff } );
+
+        const bggeometry = new THREE.PlaneGeometry(100,100);
+        const whitebg = new THREE.Mesh(bggeometry,whitemat);
+        const blackbg = new THREE.Mesh(bggeometry,blackmat);
+        whiteroom.add( whitebg );
+        blackroom.add( blackbg );
+        whitebg.position.z = -30;
+        blackbg.position.z = -30;
+
+        // const stgeom = new THREE.BoxGeometry(4,4,4);
+        // const testboxblack = new THREE.Mesh(stgeom,blackmat);
+        // const testboxwhite = new THREE.Mesh(stgeom,whitemat);
+        // testboxblack.position.z = -15;
+        // testboxwhite.position.z = -16;
+        // whiteroom.add( testboxblack );
+        // blackroom.add( testboxwhite );
+
+
+        const points = [[],[],[],[],[]];
+        const l = 10, ll = l*1.1;
+        const portl = 1.9* l;
+
+        const portalgeometry = new THREE.PlaneGeometry(portl,portl);
+        const portalplane = new THREE.Mesh(portalgeometry,portalmaterial);
+
+        stencilScene.add( portalplane );
+
+        points[0].push( new THREE.Vector3( -l, -ll, 0 ) );
+        points[0].push( new THREE.Vector3( -l, ll, 0 ) );
+
+        points[1].push( new THREE.Vector3( -ll, l, 0 ) );
+        points[1].push( new THREE.Vector3( ll, l, 0 ) );
+
+        points[2].push( new THREE.Vector3( l, ll, 0 ) );
+        points[2].push( new THREE.Vector3( l, -ll, 0 ) );
+        
+        points[3].push( new THREE.Vector3( -ll, -l, 0 ) );
+        points[3].push( new THREE.Vector3( ll, -l, 0 ) );
+
+        points[4].push( new THREE.Vector3( -portl/2 * 0.99, -portl/2 * 0.99, 0 ) );
+        points[4].push( new THREE.Vector3( -portl/2 * 0.99, portl/2 * 0.99, 0 ) );
+        points[4].push( new THREE.Vector3( portl/2 * 0.99, portl/2 * 0.99, 0 ) );
+        points[4].push( new THREE.Vector3( portl/2 * 0.99, -portl/2 * 0.99, 0 ) );
+        points[4].push( new THREE.Vector3( -portl/2 * 0.99, -portl/2 * 0.99, 0 ) );
+
+        const linebuff = [];
+        for(i=0;i<4;i++){
+            linebuff.push(new THREE.BufferGeometry().setFromPoints( points[i] ));
+        }
+        const linebuffmerge = BufferGeometryUtils.mergeBufferGeometries(linebuff);
+
+        const squarebuff = new THREE.BufferGeometry().setFromPoints( points[4] );
+
+        const lines = new THREE.LineSegments( linebuffmerge, linemat1 );
+        const square = new THREE.Line( squarebuff, linemat1 );
+        scene.add( lines );
+        blackroom.add( square );
+
+        const points2 = [[],[]];
+        points2[0].push( new THREE.Vector3( -1, 0, 0 ) );
+        points2[0].push( new THREE.Vector3( 1, 0, 0 ) );
+        points2[1].push( new THREE.Vector3( 0, -1, 0 ) );
+        points2[1].push( new THREE.Vector3( 0, 1, 0 ) );
+        const linebuff2 = []
+        for(i=0;i<2;i++){
+            linebuff2.push(new THREE.BufferGeometry().setFromPoints( points2[i] ));
+        }
+        const starbuff = BufferGeometryUtils.mergeBufferGeometries(linebuff2);
+
+        const stars = [];
+        for(i=0;i<150;i++){
+            stars.push(new THREE.LineSegments( starbuff, linemat1 ));
+            const spreadwidth = 400, spreadheight = 200;
+            stars[i].position.x = Math.floor(Math.random() * spreadwidth) - spreadwidth/2;
+            stars[i].position.y = Math.floor(Math.random() * spreadheight) - spreadheight/2;
+            stars[i].position.z = Math.floor(Math.random() * -100) - 40;
+            scene.add(stars[i]);
+        }
+
+        // create all the stuff that goes in the scenes
+        let textGeoArray = [];
+        let textMeshArray = [];
+        let parameters;
+
+
+        function init(){
+            const loader = new THREE.FontLoader();
+            loader.load( 'https://raw.githubusercontent.com/mrdoob/three.js/master/examples/fonts/gentilis_regular.typeface.json', function ( response ) {
+                font = response;
+                createText();
+            } );
+        }
+
+        function createText() {
+
+            parameters = {
+
+                font: font,
+
+                size: 4,
+                height: 2,
+                curveSegments: 12
+
+            }
+
+            //add elements to all the pages
+            textGeoArray.push([new THREE.TextGeometry( "this is page 0", parameters )]); //page 0
+            textGeoArray.push([new THREE.TextGeometry( "this is page 1", parameters )]); //page 1
+            textGeoArray.push([new THREE.TextGeometry( "this is page 2", parameters )]); //page 2
+            textGeoArray.push([new THREE.TextGeometry( "this is page 3", parameters )]); //page 3
+            textGeoArray.push([new THREE.TextGeometry( "this is page 4", parameters )]); //page 4
+            textGeoArray.push([new THREE.TextGeometry( "this is page 5", parameters )]); //page 5
+            textGeoArray.push([new THREE.TextGeometry( "this is page 6", parameters )]); //page 6
+            textGeoArray.push([new THREE.TextGeometry( "this is page 7", parameters )]); //page 7
+
+            for(i=0;i<textGeoArray.length;i++){
+                textMeshArray.push([]);
+
+                if(i%2==1){
+                    for(j=0;j<textGeoArray[i].length;j++){
+                        textMeshArray[i].push(new THREE.Mesh( textGeoArray[i][j],whitemat ));
+                        textMeshArray[i][j].position.z = -20
+                        textMeshArray[i][j].position.x = -15
+                    } 
+                }
+                else{
+                    for(j=0;j<textGeoArray[i].length;j++){
+                        textMeshArray[i].push(new THREE.Mesh( textGeoArray[i][j],blackmat ));
+                        textMeshArray[i][j].position.z = -20
+                        textMeshArray[i][j].position.x = -15
+                    }
+                }
+            }
+
+            for(i=0;i<textMeshArray[0].length;i++){
+                whiteroom.add(textMeshArray[0][i]);
+                textMeshArray[0][i].position.z = -20
+                textMeshArray[0][i].position.x = -15
+            }
+
+        }
+
+        function animate() {
+            requestAnimationFrame( animate );
+
+            // rotx += 0.01;   
+
+            camera.position.x = mouse.x * 3;
+            camera.lookAt( 0, 0, 0 );
+
+
+            document.getElementById("text1").innerHTML = rotx;
+            document.getElementById("text2").innerHTML = camera.rotation.y;
+            document.getElementById("text3").innerHTML = camera.position.x;
+            document.getElementById("text4").innerHTML = phase;
+
+            // console.log(camera.rotation.y);
+            
+            // console.log(rotx);
+
+            lines.rotation.y = rotx;
+            square.rotation.y = rotx;
+            portalplane.rotation.y = rotx;
+
+            // testboxblack.rotation.y += 0.01;
+            // testboxblack.rotation.x += 0.02;
+            // testboxwhite.rotation.y -= 0.01;
+            // testboxwhite.rotation.x -= 0.02;
+
+            renderer.autoClearStencil = false;
+            renderer.autoClearColor = false;
+            renderer.clearStencil();
+
+            const gl = renderer.getContext();
+
+            gl.enable(gl.STENCIL_TEST);
+            gl.stencilMask(0xff);
+            gl.stencilFunc(gl.ALWAYS, 1, 0xff);
+            gl.stencilOp(gl.KEEP, gl.KEEP, gl.REPLACE);
+            renderer.render( stencilScene, camera );
+
+            gl.disable(gl.STENCIL_TEST);
+            renderer.render( scene, camera );
+
+            gl.enable(gl.STENCIL_TEST);
+            gl.stencilFunc(gl.EQUAL, 1, 0xff);
+            // gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
+            if(phase%2 == 1){
+                renderer.render( blackroom, camera);
+            }
+            else{
+                renderer.render( whiteroom, camera);
+            }
+            
+        }
+
+        function onMouseMove( event ) {
+            let oldx = mouse.x;
+
+            mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+            mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+            let newx = mouse.x;
+
+            if(mousehold){
+                let mouseshift = oldx - newx;
+                if(mouseshift>0 && rotx > (textGeoArray.length - 1) * Math.PI * -1 - 0.5){
+                    rotx -= mouseshift;
+                }
+                if(mouseshift<0 && rotx < 0.5){
+                    rotx -= mouseshift;
+                }
+            }
+
+            if(Math.abs(rotx%Math.PI) - Math.PI / 2 > -camera.rotation.y && Math.abs(prevrotx%Math.PI) - Math.PI / 2 <= -prevcr && Math.abs(rotx%Math.PI) - Math.PI / 2 < 1) {
+                phase++;
+                onPhaseChange(1);
+                console.log(phase);
+            }
+
+            if(Math.abs(rotx%Math.PI) - Math.PI / 2 < -camera.rotation.y && Math.abs(prevrotx%Math.PI) - Math.PI / 2 >= -prevcr && Math.abs(rotx%Math.PI) - Math.PI / 2 > -1) {
+                phase--;
+                onPhaseChange(-1);
+                console.log(phase);
+            }
+            
+            prevrotx = rotx;
+            prevcr =  camera.rotation.y;
+
+        }
+
+        function onPhaseChange(direction){
+            if(phase%2 == 0){
+                for(i=0;i<textMeshArray[phase - direction].length;i++){
+                    blackroom.remove(textMeshArray[phase - direction][i]);
+                }
+                for(i=0;i<textMeshArray[phase].length;i++){
+                    whiteroom.add(textMeshArray[[phase]][i]);
+                }
+            }
+            else{
+                for(i=0;i<textMeshArray[phase - direction].length;i++){
+                    whiteroom.remove(textMeshArray[phase - direction][i]);
+                }
+                for(i=0;i<textMeshArray[phase].length;i++){
+                    blackroom.add(textMeshArray[[phase]][i]);
+                }
+            }
+        }
+
+        function onMouseDown( event ) {
+            mousehold = true;
+        }
+
+        function onMouseUp( event ) {
+            mousehold = false;
+        }
+
+        window.addEventListener( 'mousemove', onMouseMove, false );
+        window.addEventListener( 'mousedown', onMouseDown, false );
+        window.addEventListener( 'mouseup', onMouseUp, false );
+
+
+        init();
+
+        animate();
+
+    </script>
+</body>
+</html>
